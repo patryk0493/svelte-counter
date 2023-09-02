@@ -1,5 +1,7 @@
 # Svelte + TS + Vite
 
+[![Deploy](https://github.com/patryk0493/svelte-counter/actions/workflows/deploy.yml/badge.svg)](https://github.com/patryk0493/svelte-counter/actions/workflows/deploy.yml)
+
 This template should help get you started developing with Svelte and TypeScript in Vite.
 
 ## Recommended IDE Setup
