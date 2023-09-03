@@ -1,24 +1,30 @@
 <script lang="ts">
+  import {
+    binaryToDecimal,
+    decimalToBinary,
+    emptyArray,
+    generateRandom,
+    generateRandomNonZero,
+  } from "../utils/utils";
   import ResetButton from "./ResetButton.svelte";
   import ValueButton from "./ValueButton.svelte";
 
-  let powersCount = 4;
-  let displayBits = false;
+  export let powersCount = 4;
+  export let displayBits = true;
+
   let moves = 0;
-  let base = 2;
+  let hintsLeft = powersCount;
+  let hints = emptyArray(powersCount);
+  let active = emptyArray(powersCount);
 
-  $: active = emptyArray();
-  $: powers = emptyArray().map((_, index) => powersCount - index - 1);
-  $: goal = generateRandom(Math.pow(base, powersCount));
+  $: powers = active.map((_, index) => powersCount - 1 - index);
+  $: goal = generateRandomNonZero(Math.pow(2, powersCount));
   $: isCorrect = currentValue === goal;
-  $: currentValue = active.reduce((prev, curr, index) => {
-    const val = curr === 1 ? Math.pow(base, active.length - 1 - index) : 0;
-    return prev + val;
-  }, 0);
+  $: currentValue = binaryToDecimal(active);
+  $: binarySolution = decimalToBinary(goal, active.length);
+  $: document.title = `cplx:  ${goal}: ${currentValue} | complexity game`;
 
-  let emptyArray = () => new Array<number>(powersCount).fill(0);
-
-  function toggle(
+  function tryToggle(
     event: MouseEvent & {
       currentTarget: EventTarget & HTMLButtonElement;
     }
@@ -32,14 +38,32 @@
 
   function reset() {
     moves = 0;
-    active = emptyArray();
-    goal = generateRandom(Math.pow(base, powersCount));
+    hintsLeft = powersCount;
+    hints = emptyArray(powersCount);
+    active = emptyArray(powersCount);
+    goal = generateRandomNonZero(Math.pow(2, powersCount));
   }
 
-  function generateRandom(maxLimit: number): number {
-    const rand = Math.random() * maxLimit;
-    const generatedValue = Math.floor(rand);
-    return generatedValue === 0 ? generateRandom(maxLimit) : generatedValue;
+  function handlePowersCountInput(
+    e: Event & { currentTarget: EventTarget & HTMLInputElement }
+  ) {
+    const inputElement = e.target as HTMLInputElement;
+    const value = Number(inputElement.value);
+    if (value < 1) return;
+    powersCount = value;
+    reset();
+  }
+
+  function giveHint() {
+    const index = generateRandom(active.length);
+    if (hints[index]) {
+      giveHint();
+      return;
+    }
+    moves++;
+    hintsLeft--;
+    hints[index] = 1;
+    active[index] = binarySolution[index];
   }
 </script>
 
@@ -50,24 +74,19 @@
     type="number"
     class="powers-count"
     value={powersCount}
-    on:input={(e) => {
-      const value = Number(e.data);
-      if (value < 1) return;
-      powersCount = value;
-      reset();
-    }}
+    on:input={handlePowersCountInput}
   />
   <br />
 
   <ResetButton {reset} {isCorrect} />
 
+  <button disabled={hintsLeft <= 0 || isCorrect} on:click={giveHint}
+    >Give a hint ({hintsLeft})
+  </button>
+
   <button on:click={() => (displayBits = !displayBits)}>
-    display
-    {#if displayBits}
-      powers
-    {:else}
-      bits
-    {/if}
+    Display
+    {displayBits ? "powers" : "bits"}
   </button>
 
   {#if isCorrect}
@@ -78,7 +97,13 @@
 
   <div class:won={isCorrect} class="list">
     {#each powers as power, i}
-      <ValueButton activeId={active[i]} {base} {toggle} {power} {displayBits} />
+      <ValueButton
+        activeId={!hints[i] ? active[i] : binarySolution[i]}
+        toggle={tryToggle}
+        {power}
+        {displayBits}
+        isHintGiven={!!hints[i]}
+      />
     {/each}
   </div>
 
