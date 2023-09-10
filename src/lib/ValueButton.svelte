@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { MouseEventHandler } from "svelte/elements";
+  import { fade } from "svelte/transition";
 
   export let power: number;
   export let displayBits: boolean;
@@ -8,7 +9,12 @@
   export let toggle: MouseEventHandler<HTMLButtonElement>;
 </script>
 
-<button data-power={power} on:click={toggle} disabled={isHintGiven}>
+<button
+  transition:fade
+  data-power={power}
+  on:click={toggle}
+  disabled={isHintGiven}
+>
   {#if displayBits}
     {activeId}
   {:else}

@@ -45,7 +45,7 @@ button {
   cursor: pointer;
   transition: border-color 0.25s;
 }
-button:hover, 
+button:hover,
 button.active {
   border-color: #646cff;
   border: 1px solid #646cff;
@@ -56,8 +56,8 @@ button.active {
 }
 
 .list {
-  display: flex; 
-  gap: 10px; 
+  display: flex;
+  gap: 10px;
   justify-content: center;
 }
 

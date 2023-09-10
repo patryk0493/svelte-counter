@@ -1,111 +1,105 @@
 <script lang="ts">
-  import {
-    binaryToDecimal,
-    decimalToBinary,
-    emptyArray,
-    generateRandom,
-    generateRandomNonZero,
-  } from "../utils/utils";
-  import ResetButton from "./ResetButton.svelte";
-  import ValueButton from "./ValueButton.svelte";
+  import { onMount, type ComponentType } from "svelte";
+  import { fade } from "svelte/transition";
+  import { flip } from "svelte/animate";
+  import ResetButton from "@/lib/ResetButton.svelte";
+  import { store } from "@/store/useStore";
 
-  export let powersCount = 4;
-  export let displayBits = true;
+  let ValueButton: ComponentType;
 
-  let moves = 0;
-  let hintsLeft = powersCount;
-  let hints = emptyArray(powersCount);
-  let active = emptyArray(powersCount);
+  onMount(async () => {
+    ValueButton = (await import(`./ValueButton.svelte`)).default;
+  });
 
-  $: powers = active.map((_, index) => powersCount - 1 - index);
-  $: goal = generateRandomNonZero(Math.pow(2, powersCount));
-  $: isCorrect = currentValue === goal;
-  $: currentValue = binaryToDecimal(active);
-  $: binarySolution = decimalToBinary(goal, active.length);
-  $: document.title = `cplx:  ${goal}: ${currentValue} | complexity game`;
+  const {
+    isCorrect,
+    currentValue,
+    powers,
+    binarySolution,
+    goal,
+    powersCount,
+    displayBits,
+    noHintsLeft,
+  } = store;
+
+  $: document.title = `cplx:  ${$goal}: ${$currentValue} | complexity game`;
 
   function tryToggle(
     event: MouseEvent & {
       currentTarget: EventTarget & HTMLButtonElement;
-    }
+    },
   ) {
-    if (isCorrect) return;
-    moves++;
-    const index =
-      active.length - 1 - Number(event.currentTarget.dataset["power"]);
-    active[index] = active[index] === 0 ? 1 : 0;
-  }
-
-  function reset() {
-    moves = 0;
-    hintsLeft = powersCount;
-    hints = emptyArray(powersCount);
-    active = emptyArray(powersCount);
-    goal = generateRandomNonZero(Math.pow(2, powersCount));
+    const value = Number(event.currentTarget.dataset["power"]);
+    if ($isCorrect) return;
+    store.tryToggle(value);
   }
 
   function handlePowersCountInput(
-    e: Event & { currentTarget: EventTarget & HTMLInputElement }
+    e: Event & { currentTarget: EventTarget & HTMLInputElement },
   ) {
     const inputElement = e.target as HTMLInputElement;
     const value = Number(inputElement.value);
     if (value < 1) return;
-    powersCount = value;
-    reset();
-  }
-
-  function giveHint() {
-    const index = generateRandom(active.length);
-    if (hints[index]) {
-      giveHint();
-      return;
-    }
-    moves++;
-    hintsLeft--;
-    hints[index] = 1;
-    active[index] = binarySolution[index];
+    store.setPowersCount(value);
   }
 </script>
 
-<main>
+<header>
   <label for="powers-count"> Powers count </label>
   <input
     id="powers-count"
     type="number"
     class="powers-count"
-    value={powersCount}
+    value={$powersCount}
+    min="1"
+    max="10"
     on:input={handlePowersCountInput}
   />
   <br />
 
-  <ResetButton {reset} {isCorrect} />
+  <ResetButton reset={store.reset} isCorrect={$isCorrect} />
 
-  <button disabled={hintsLeft <= 0 || isCorrect} on:click={giveHint}
-    >Give a hint ({hintsLeft})
+  <button
+    disabled={$store.hintsLeft <= 0 || $isCorrect}
+    on:click={store.giveHint}
+    >Give a hint ({$store.hintsLeft})
   </button>
 
-  <button on:click={() => (displayBits = !displayBits)}>
+  <button on:click={store.toggleDisplayBits}>
     Display
-    {displayBits ? "powers" : "bits"}
+    {$displayBits ? "powers" : "bits"}
   </button>
+</header>
 
-  {#if isCorrect}
-    <h1>🚀 You won! ✅</h1>
-  {:else}
-    <h1>Your goal is <b>{goal}</b>, but you got: {currentValue}</h1>
-  {/if}
+<main>
+  {#key $isCorrect || $noHintsLeft}
+    <h1 in:fade>
+      {#if $noHintsLeft}
+        You used all of hints!
+      {:else if $isCorrect}
+        🚀 You won! ✅
+      {:else}
+        Your goal is <b>{$goal}</b>, but you got: {$currentValue}
+      {/if}
+    </h1>
+  {/key}
 
-  <div class:won={isCorrect} class="list">
-    {#each powers as power, i}
-      <ValueButton
-        activeId={!hints[i] ? active[i] : binarySolution[i]}
-        toggle={tryToggle}
-        {power}
-        {displayBits}
-        isHintGiven={!!hints[i]}
-      />
+  <div class:won={$isCorrect} class="list">
+    {#each $powers as power, index (index)}
+      <div animate:flip>
+        <svelte:component
+          this={ValueButton}
+          activeId={!$store.hints[index]
+            ? $store.active[index]
+            : $binarySolution[index]}
+          toggle={tryToggle}
+          {power}
+          displayBits={$displayBits}
+          isHintGiven={!!$store.hints[index]}
+        />
+      </div>
     {/each}
   </div>
 
-  <h1>You made {moves} move/s</h1>
+  <h1>You made {$store.moves} move/s</h1>
 </main>

@@ -14,7 +14,7 @@ export function emptyArray(length: number) {
 export function decimalToBinary(number: number, length: number): Array<number> {
   if (number < 0 || length <= 0) {
     throw new Error(
-      "Number must be non-negative and length must be greater than 0."
+      "Number must be non-negative and length must be greater than 0.",
     );
   }
   let binaryString = number.toString(2);
