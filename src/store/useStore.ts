@@ -10,65 +10,62 @@ import {
 const storeCreator = (power: number) => {
   const powersCount = writable(power);
   const displayBits = writable(true);
+  const answers = writable(emptyArray(power));
+  const movesCount = writable(power);
+  const hintsLeft = writable(power);
+  const goal = writable(generateRandomNonZero(Math.pow(2, power)));
+  const hints = writable(emptyArray(power));
 
-  const baseStore = writable({
-    moves: 0,
-    hintsLeft: power,
-    hints: emptyArray(power),
-    active: emptyArray(power),
-  });
-
-  const goal = derived([powersCount], ([$powersCount]) =>
-    generateRandomNonZero(Math.pow(2, $powersCount)),
+  const powers = derived(powersCount, ($powersCount) =>
+    emptyArray($powersCount).map((_, index) => $powersCount - 1 - index),
   );
-  const powers = derived(baseStore, ({ active }) =>
-    active.map((_, index, a) => a.length - 1 - index),
-  );
-  const currentValue = derived(baseStore, ($store) =>
-    binaryToDecimal($store.active),
-  );
+  const currentValue = derived(answers, ($active) => binaryToDecimal($active));
   const isCorrect = derived(
     [goal, currentValue],
     ([$goal, $currentValue]) => $goal === $currentValue,
   );
-  const binarySolution = derived([baseStore, goal], ([$store, $goal]) =>
-    decimalToBinary($goal, $store.active.length),
+  const binarySolution = derived([answers, goal], ([$active, $goal]) =>
+    decimalToBinary($goal, $active.length),
   );
-  const noHintsLeft = derived(baseStore, ($store) => $store.hintsLeft === 0);
+  const noHintsLeft = derived(hintsLeft, ($hintsLeft) => $hintsLeft === 0);
 
   const giveHint = () => {
-    const { active, hints } = get(baseStore);
-    const index = generateRandom(active.length);
-    if (hints[index]) {
+    const hintsValue = get(hints);
+    const activeValue = get(answers);
+    const index = generateRandom(activeValue.length);
+    if (hintsValue[index]) {
       giveHint();
       return;
     }
-    baseStore.update((store) => {
-      store.moves += 1;
-      store.hintsLeft -= 1;
-      store.hints[index] = 1;
-      store.active[index] = get(binarySolution)[index];
-      return store;
+    hintsLeft.update(state => state - 1);
+    hints.update((state) => {
+      state[index] = 1;
+      return state;
+    });
+    movesCount.update(state => state + 1);
+    answers.update((state) => {
+      state[index] = get(binarySolution)[index];
+      return state;
     });
   };
 
   const reset = () => {
     const powersCountValue = get(powersCount);
-    baseStore.update((state) => {
-      state.moves = 0;
-      state.hintsLeft = powersCountValue;
-      state.hints = emptyArray(powersCountValue);
-      state.active = emptyArray(powersCountValue);
-      return state;
-    });
+    hintsLeft.set(powersCountValue);
+    hints.set(emptyArray(powersCountValue));
+    goal.set(generateRandomNonZero(Math.pow(2, powersCountValue)))
+    movesCount.set(0);
+    answers.set(emptyArray(powersCountValue));
   };
 
   return {
-    subscribe: baseStore.subscribe,
-    set: baseStore.set,
     // ? writable
     displayBits,
     powersCount,
+    answers,
+    movesCount,
+    hintsLeft,
+    hints,
     // ? derived - reactive
     isCorrect,
     currentValue,
@@ -78,20 +75,20 @@ const storeCreator = (power: number) => {
     noHintsLeft,
     // ? Actions
     toggleDisplayBits: () => {
-      displayBits.update((value) => !value);
+      displayBits.update((state) => !state);
     },
     reset,
     giveHint,
     tryToggle: (value: number) => {
-      baseStore.update((state) => {
-        const index = state.active.length - 1 - value;
-        state.moves += 1;
-        state.active[index] = state.active[index] === 0 ? 1 : 0;
+      const index = get(answers).length - 1 - value;
+      movesCount.update(state => state + 1);
+      answers.update((state) => {
+        state[index] = state[index] === 0 ? 1 : 0;
         return state;
       });
     },
-    setPowersCount: (value: number) => {
-      powersCount.set(value);
+    setPowersCount: (state: number) => {
+      powersCount.set(state);
       reset();
     },
   };

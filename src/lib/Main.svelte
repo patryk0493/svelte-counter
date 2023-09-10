@@ -20,6 +20,10 @@
     powersCount,
     displayBits,
     noHintsLeft,
+    answers,
+    movesCount,
+    hintsLeft,
+    hints,
   } = store;
 
   $: document.title = `cplx:  ${$goal}: ${$currentValue} | complexity game`;
@@ -59,10 +63,8 @@
 
   <ResetButton reset={store.reset} isCorrect={$isCorrect} />
 
-  <button
-    disabled={$store.hintsLeft <= 0 || $isCorrect}
-    on:click={store.giveHint}
-    >Give a hint ({$store.hintsLeft})
+  <button disabled={$hintsLeft <= 0 || $isCorrect} on:click={store.giveHint}
+    >Give a hint ({$hintsLeft})
   </button>
 
   <button on:click={store.toggleDisplayBits}>
@@ -72,7 +74,7 @@
 </header>
 
 <main>
-  {#key $isCorrect || $noHintsLeft}
+  {#key $isCorrect || $noHintsLeft || $goal}
     <h1 in:fade>
       {#if $noHintsLeft}
         You used all of hints!
@@ -89,17 +91,16 @@
       <div animate:flip>
         <svelte:component
           this={ValueButton}
-          activeId={!$store.hints[index]
-            ? $store.active[index]
-            : $binarySolution[index]}
+          activeId={!$hints[index] ? $answers[index] : $binarySolution[index]}
+          isChecked={!!$hints[index] || $hints[index] !== $answers[index]}
           toggle={tryToggle}
           {power}
           displayBits={$displayBits}
-          isHintGiven={!!$store.hints[index]}
+          isHintGiven={!!$hints[index]}
         />
       </div>
     {/each}
   </div>
 
-  <h1>You made {$store.moves} move/s</h1>
+  <h1>You made {$movesCount} move/s</h1>
 </main>
