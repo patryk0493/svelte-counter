@@ -4,6 +4,12 @@
   import { flip } from "svelte/animate";
   import ResetButton from "@/lib/ResetButton.svelte";
   import { store } from "@/store/useStore";
+  import {
+    Button,
+    ButtonSet,
+    FormGroup,
+    NumberInput,
+  } from "carbon-components-svelte";
 
   let ValueButton: ComponentType;
 
@@ -38,39 +44,39 @@
     store.tryToggle(value);
   }
 
-  function handlePowersCountInput(
-    e: Event & { currentTarget: EventTarget & HTMLInputElement },
-  ) {
-    const inputElement = e.target as HTMLInputElement;
-    const value = Number(inputElement.value);
+  function handlePowersCountInput(e: CustomEvent<number | null>) {
+    const value = Number(e.detail);
     if (value < 1) return;
     store.setPowersCount(value);
   }
 </script>
 
 <header>
-  <label for="powers-count"> Powers count </label>
-  <input
-    id="powers-count"
-    type="number"
-    class="powers-count"
-    value={$powersCount}
-    min="1"
-    max="10"
-    on:input={handlePowersCountInput}
-  />
-  <br />
+  <FormGroup>
+    <NumberInput
+      label="Powers count"
+      id="powers-count"
+      type="number"
+      class="powers-count"
+      value={$powersCount}
+      min={1}
+      max={10}
+      on:input={handlePowersCountInput}
+    />
+  </FormGroup>
 
-  <ResetButton reset={store.reset} isCorrect={$isCorrect} />
+  <FormGroup>
+    <ResetButton reset={store.reset} isCorrect={$isCorrect} />
 
-  <button disabled={$hintsLeft <= 0 || $isCorrect} on:click={store.giveHint}
-    >Give a hint ({$hintsLeft})
-  </button>
+    <Button disabled={$hintsLeft <= 0 || $isCorrect} on:click={store.giveHint}
+      >Give a hint ({$hintsLeft})
+    </Button>
 
-  <button on:click={store.toggleDisplayBits}>
-    Display
-    {$displayBits ? "powers" : "bits"}
-  </button>
+    <Button on:click={store.toggleDisplayBits}>
+      Display
+      {$displayBits ? "powers" : "bits"}
+    </Button>
+  </FormGroup>
 </header>
 
 <main>
@@ -86,7 +92,7 @@
     </h1>
   {/key}
 
-  <div class:won={$isCorrect} class="list">
+  <ButtonSet>
     {#each $powers as power, index (index)}
       <div animate:flip>
         <svelte:component
@@ -100,7 +106,7 @@
         />
       </div>
     {/each}
-  </div>
+  </ButtonSet>
 
   <h1>You made {$movesCount} move/s</h1>
 </main>
